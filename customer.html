@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Order Bhutan - Customer</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  body { font-family: sans-serif; background: #f2f2f2; margin: 0; }
+  header { background: #333; color: #fff; padding: 1rem; text-align: center; font-size: 1.4rem; }
+  nav { display: flex; background: #444; }
+  nav button { flex: 1; background: #444; color: #fff; padding: 1rem; border: none; font-weight: bold; cursor:pointer; }
+  nav button.active { background: #00b894; }
+
+  .section { display: none; padding: 1rem; }
+  .section.active { display: block; }
+
+  .menu-item {
+  background: #fff;
+  margin: 0.5rem 0;
+  padding: 1rem;
+  border-radius: 10px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr; /* left, center, right */
+  align-items: center;
+}
+.menu-name {
+  justify-self: start; /* left */
+}
+
+.menu-price {
+  justify-self: center; /* center */
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
+.menu-controls {
+  justify-self: end; /* right */
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.menu-info {
+  display: flex;
+  flex: 1;  /* take all space left */
+  justify-content: flex-start;
+  gap: 1rem;
+  align-items: center;
+}
+
+  .menu-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem; /* space between buttons and qty */
+}
+
+.menu-controls span {
+  min-width: 24px;  /* fixed width for quantity */
+  text-align: center;
+  font-weight: bold;
+  font-size: 1rem;
+}
+
+
+  button {
+    cursor: pointer;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+    font-size: 1rem;
+    padding: 0.5rem 0.9rem;
+    margin-left: 0.5rem;
+    background: #00b894;
+    color: white;
+  }
+  .minus-btn { background: #d63031; }
+  .pay-btn { background: #0984e3; color: white; width: 100%; margin-top: 1rem; }
+  .done-btn { background: #2d3436; color: white; width: 100%; margin-top: 1rem; }
+  .share-btn { background: #10ac84; color: white; width: 100%; margin-top: 1rem; }
+  .cancel-btn { background: #d63031; color: white; width: 100%; margin-top: 1rem; }
+
+  input {
+    width: 100%;
+    padding: 0.6rem;
+    margin-top: 0.5rem;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    font-size: 1rem;
+  }
+
+  ul { padding-left: 1rem; }
+  li {
+    margin-bottom: 0.6rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  li span.status {
+    font-size: 0.9rem;
+    font-style: italic;
+    color: #636e72;
+    margin-left: 0.5rem;
+    white-space: nowrap;
+    flex-basis: 100%;
+    margin-top: 4px;
+  }
+
+  .qr {
+    text-align: center;
+    margin: 1rem 0;
+  }
+
+  .hidden { display: none; }
+
+  /* Order summary fixed bottom bar */
+  #orderSummaryBar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #00b894;
+    color: white;
+    padding: 0.8rem 1rem;
+    font-weight: bold;
+    font-size: 1.2rem;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 -3px 5px rgba(0,0,0,0.15);
+    z-index: 100;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  th, td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #ddd;
+    text-align: left;
+  }
+  th {
+    background: #00b894;
+    color: white;
+  }
+
+  .tracking-cancel-btn {
+    background: #d63031;
+    color: white;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.9rem;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<header>Order Bhutan - Customer</header>
+
+<nav>
+  <button class="tab active" data-tab="order">Order</button>
+  <button class="tab" data-tab="tracking">Tracking</button>
+  <button class="tab" data-tab="billing">Billing</button>
+</nav>
+
+<section id="order" class="section active">
+  <h3 id="orderHeader">Your Order (0 items)</h3>
+  <div id="menuItems"></div>
+  <div id="orderSummaryContainer" style="margin-top:1rem;"></div>
+</section>
+
+<section id="tracking" class="section">
+  <h3>Order Tracking</h3>
+  <ul id="trackingList"></ul>
+</section>
+
+<section id="billing" class="section">
+  <div class="billing-box" id="billingStep1">
+    <h4>Bill Summary</h4>
+    <ul id="billItems"></ul>
+    <p><strong>Total: Nu. <span id="billTotal">0</span></strong></p>
+    <button class="pay-btn" onclick="selectOnline()">Pay Online</button>
+    <button class="pay-btn" onclick="selectCash()">Cash Payment</button>
+  </div>
+
+  <div class="billing-box hidden" id="billingStep2">
+    <h4>Scan & Pay</h4>
+    <p>Account Number: <strong>1122000192</strong></p>
+    <div class="qr">
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=1122000192" alt="QR Code" />
+    </div>
+    <button class="done-btn" onclick="showForm()">Done</button>
+  </div>
+
+  <div class="form-box hidden" id="billingStep3">
+    <h4>Payment Info</h4>
+    <div id="paymentEntries">
+      <div class="entry">
+        <input type="text" id="name" name="name" placeholder="Name (letters only)" required />
+        <input type="text" id="phone" name="phone" placeholder="Phone Number (digits only)" required />
+      </div>
+    </div>
+    <input type="text" id="journal" placeholder="Journal Number (letters & digits)" />
+    <p><strong>Total Amount: Nu. <span id="formTotalAmount">0</span></strong></p>
+    <input type="number" id="amount" placeholder="Amount Paid" />
+    <button class="pay-btn" onclick="submitForm()">Submit</button>
+  </div>
+
+  <div class="result-box hidden" id="billingStep4">
+    <button class="pay-btn" onclick="generatePDF()">Download Bill</button>
+    <button class="share-btn" onclick="shareBill()">Share Bill</button>
+    <button class="cancel-btn" onclick="discardBill()">Discard Bill</button>
+  </div>
+</section>
+
+<div id="orderSummaryBar" style="display:none;">
+  <span id="orderSummaryText">0 items | Total: Nu. 0</span>
+  <button onclick="goToBilling()" style="background:#0984e3; border:none; padding:0.4rem 1rem; border-radius:8px; color:#fff; font-weight:bold;">Pay</button>
+</div>
+
+<script>
+  
+const menu = [
+  { name: "Shakam Paa", price: 220 },
+  { name: "Phaksha Paa", price: 250 },
+  { name: "Gondo Datshi", price: 180 },
+  { name: "Jasha Maroo", price: 200 },
+  { name: "Kewa Datshi", price: 130 },
+  { name: "Sikam Paa", price: 270 },
+  { name: "Hoentay", price: 160 },
+  { name: "Bathup", price: 80 },
+  { name: "Suja", price: 50 },
+  { name: "Fried Rice", price: 120 },
+  { name: "Beef Momo", price: 180 },
+  { name: "Red Rice Combo", price: 210 },
+  { name: "Shakam Datshi", price: 230 },
+  { name: "Veg Curry", price: 90 }
+];
+
+let orders = JSON.parse(localStorage.getItem("orders")) || {};
+let trackingStatuses = JSON.parse(localStorage.getItem("trackingStatuses")) || {};
+const trackingStatusCycle = ["Processing", "On the Way", "Delivered"];
+
+function saveOrders() {
+  localStorage.setItem("orders", JSON.stringify(orders));
+}
+
+function updateOrderUI() {
+  const orderHeader = document.getElementById("orderHeader");
+  const menuItems = document.getElementById("menuItems");
+  menuItems.innerHTML = "";
+
+  let totalItems = 0;
+  for (const item of menu) {
+    const qty = orders[item.name] || 0;
+    if (qty > 0) totalItems += qty;
+
+    const div = document.createElement("div");
+    div.className = "menu-item";
+
+    const name = document.createElement("span");
+    name.textContent = item.name;
+
+    const price = document.createElement("span");
+    price.textContent = `Nu. ${item.price}`;
+
+    const addBtn = document.createElement("button");
+    addBtn.textContent = "+";
+    addBtn.onclick = () => {
+      orders[item.name] = (orders[item.name] || 0) + 1;
+      saveOrders();
+      updateOrderUI();
+      updateBillingUI();
+    };
+
+    const minusBtn = document.createElement("button");
+    minusBtn.textContent = "-";
+    minusBtn.className = "minus-btn";
+    minusBtn.onclick = () => {
+      if (orders[item.name]) {
+        orders[item.name]--;
+        if (orders[item.name] === 0) delete orders[item.name];
+        saveOrders();
+        updateOrderUI();
+        updateBillingUI();
+      }
+    };
+
+    const qtyLabel = document.createElement("span");
+    qtyLabel.textContent = qty;
+
+    const controls = document.createElement("div");
+controls.className = "menu-controls";
+controls.append(minusBtn, qtyLabel, addBtn);
+
+const info = document.createElement("div");
+info.className = "menu-info";
+info.append(name, price);
+
+div.append(info, controls);
+
+
+    menuItems.appendChild(div);
+  }
+
+  orderHeader.textContent = `Your Order (${totalItems} items)`;
+
+  // Update order summary bar
+  const orderSummaryBar = document.getElementById("orderSummaryBar");
+  const orderSummaryText = document.getElementById("orderSummaryText");
+
+  const totalPrice = Object.entries(orders).reduce((sum, [itemName, qty]) => {
+    const item = menu.find(i => i.name === itemName);
+    return sum + (item.price * qty);
+  }, 0);
+
+  if (totalItems > 0) {
+    orderSummaryBar.style.display = "flex";
+    orderSummaryText.textContent = `${totalItems} items | Total: Nu. ${totalPrice}`;
+  } else {
+    orderSummaryBar.style.display = "none";
+  }
+}
+
+
+function updateBillingUI() {
+  const billItems = document.getElementById("billItems");
+  billItems.innerHTML = "";
+
+  let total = 0;
+  for (const [itemName, qty] of Object.entries(orders)) {
+    const item = menu.find(i => i.name === itemName);
+    const li = document.createElement("li");
+    li.textContent = `${itemName} x ${qty} = Nu. ${item.price * qty}`;
+    billItems.appendChild(li);
+    total += item.price * qty;
+  }
+
+  document.getElementById("billTotal").textContent = total.toFixed(2);
+  document.getElementById("amount").value = total.toFixed(2);
+  const totalSpan = document.getElementById("formTotalAmount");
+  if (totalSpan) totalSpan.textContent = total.toFixed(2);
+}
+
+function goToBilling() {
+  document.querySelectorAll(".section").forEach(sec => sec.classList.remove("active"));
+  document.getElementById("billing").classList.add("active");
+  updateBillingUI();
+}
+
+document.querySelectorAll(".tab").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tab").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    const tab = btn.getAttribute("data-tab");
+    document.querySelectorAll(".section").forEach(sec => sec.classList.remove("active"));
+    document.getElementById(tab).classList.add("active");
+  });
+});
+
+function selectOnline() {
+  document.getElementById("billingStep1").classList.add("hidden");
+  document.getElementById("billingStep2").classList.remove("hidden");
+}
+
+function selectCash() {
+  document.getElementById("billingStep1").classList.add("hidden");
+  showForm();
+}
+
+function showForm() {
+  document.getElementById("billingStep2").classList.add("hidden");
+  document.getElementById("billingStep3").classList.remove("hidden");
+}
+
+function submitForm() {
+  alert("Form submitted!");
+  document.getElementById("billingStep3").classList.add("hidden");
+  document.getElementById("billingStep4").classList.remove("hidden");
+}
+
+function generatePDF() { alert("PDF download not implemented."); }
+function shareBill() { alert("Share not implemented."); }
+function discardBill() { alert("Bill discarded."); }
+
+updateOrderUI();
+updateBillingUI();
+</script>
+
+</body>
+</html>
